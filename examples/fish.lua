@@ -23,7 +23,6 @@ function init()
     local j = 0
     while true do
       local dev = js.devinfo(j)
-      print(dev, dev.name)
       if dev == nil then break end
       if dev.num_buttons >= 2 and dev.num_axes >= 2 then
         devno = j

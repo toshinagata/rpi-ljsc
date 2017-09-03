@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns='http://www.w3.org/1999/xhtml' lang='ja' xml:lang='ja'>
+<head>
+<meta lang='ja' xml:lang='ja' content='text/html;charset=utf-8' http-equiv='Content-Type' />
+<title>rpi-ljsc: 概要</title>
+<script type="text/javascript" src="./branchcss.js"></script>
+<link href='index.html' rel='Start' />
+</head>
+<body>
+<div class="navigation top">
+<a href="index.html">rpi-ljsc トップ</a> &gt; 概要
+</div>
+
+<h1>rpi-ljsc: 概要</h1>
+<div class="end_header"></div>
+
+<h2>1. rpi-ljsc とは何か</h2>
+<p>
+rpi-ljsc は、Raspberry Pi の luajit で OpenVG を使ってフレームバッファ描画をするためのライブラリです。ライブラリと言っても、すべて luajit で書かれたテキストファイル（今のところ）ですので、コンパイルもインストール操作も不要です。改造も簡単にできます。
+</p>
+<p class="note">
+※ Raspbian の方には、いくつかのパッケージの追加インストールが必要な場合があります。
+</p>
+<p>
+Luajit は、プログラミング言語 Lua の Just-in-time コンパイラ版です。スクリプト言語として手軽に使える上に、非常に高速です。シンプルな言語ですが、おもしろい特徴があるので、初めての方は一度試してみてください。
+</p>
+
+<h2>2. 使い方</h2>
+<p>
+<a href="https://github.com/toshinagata/rpi-ljsc/">ダウンロードページ</a>に行って、"Download ZIP" で zip アーカイブをダウンロードしてください。<code>Downloads</code> ディレクトリに <code>rpi-ljsc-master.zip</code> がありますので、<code>unzip rpi-ljsc-master.zip</code> で解凍してください。
+</p>
+<p>
+何ができるか手っ取り早く試すには、<code>rpi-ljsc-master/examples</code> に移動して、<code>luajit shapes.lua</code> と入力してください。数字キーの 1〜6 を押すと、画面にいろいろな図形が表示されます。
+</p>
+
+<div class="navigation">
+<a href="index.html">rpi-ljsc トップ</a> &gt; 概要
+</div>
+
+<div class="copyright">
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/deed.ja"><img alt="クリエイティブ・コモンズ・ライセンス" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />
+このページは <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/deed.ja">クリエイティブ・コモンズ 表示-非営利-継承 4.0 国際ライセンス</a>の下に提供されています。<br />
+&copy; 2017 Toshi Nagata.
+Facebook:&nbsp;<a href="http://facebook.com/toshi.nagata.319">toshi.nagata.319</a>
+WebSite:&nbsp;<a href="http://blog.d-alchemy.xyz/">http://blog.d-alchemy.xyz/</a>
+</div>
+
+</body>
+</html>

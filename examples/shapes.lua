@@ -6,6 +6,7 @@ sc = require "screen"
 if not sc.init(1) then sc.init(0) end
 
 term.setRawMode()
+term.echo()
 term.wait()
 
 ::redo::

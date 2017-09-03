@@ -32,63 +32,62 @@ local JSIOCGNAME      = function (len) return ctl.IOR(0x6a, 0x13, len) end -- 0x
 local devices = {}
 local initialized = false
 
+function js.getDeviceInfo(fd)
+  local dev = {}
+  local version = ffi.new("int[1]")
+  local axes = ffi.new("unsigned char[1]")
+  local buttons = ffi.new("unsigned char[1]")
+  local name = ffi.new("char[128]")
+  ffi.C.ioctl(fd, JSIOCGNAME(128), name)
+  dev.name = ffi.string(name)
+  local lname = string.lower(dev.name)
+  if string.find(lname, "keyboard") or string.find(lname, "mouse") or string.find(lname, "touchscreen") then
+    return nil  --  This is (probably) not a joystick
+  end
+  ffi.C.ioctl(fd, JSIOCGVERSION, version)
+  ffi.C.ioctl(fd, JSIOCGAXES, axes)
+  ffi.C.ioctl(fd, JSIOCGBUTTONS, buttons)
+  dev.version = version[0]
+  dev.num_axes = axes[0]
+  dev.num_buttons = buttons[0]
+  dev.event_buf = ffi.new("struct js_event[1]")
+  dev.buf_size = ffi.sizeof(dev.event_buf)
+  dev.axes = {}
+  dev.buttons = {}
+  for j = 1, axes[0] do
+    table.insert(dev.axes, { type = 0, number = 0, value = 0, time = 0 })
+  end
+  for j = 1, buttons[0] do
+    table.insert(dev.buttons, { type = 0, number = 0, value = 0, time = 0 })
+  end
+  return dev
+end
+  
 function js.open(devno)
   if devno < 0 or devno >= 8 then return -1 end
   local fd = ffi.C.open(string.format("/dev/input/js%d", devno), ctl.O_RDONLY + ctl.O_NONBLOCK)
   if fd >= 0 then
-    local dev = {}
-    dev.num = devno
-    dev.fd = fd
-    dev.last_time = 0
-    dev.axis_x = 0
-    dev.axis_y = 0
-    dev.buttons = 0
-    devices[devno + 1] = dev
-    return devno
-  else
-    return -1
+    dev = js.getDeviceInfo(fd)
+    if dev then
+      dev.num = devno
+      dev.fd = fd
+      dev.last_time = 0
+      devices[#devices + 1] = dev
+      return #devices
+    else
+      ffi.C.close(fd)
+    end
   end
+  return -1
 end
 
 function js.init()
   for i = 0, 7 do
     js.open(i)
   end
-  if #devices > 0 then
-    js.setDeviceInfo()
-    initialized = true
-  end
   return #devices
 end
   
-function js.setDeviceInfo()
-  local version = ffi.new("int[1]")
-  local axes = ffi.new("unsigned char[1]")
-  local buttons = ffi.new("unsigned char[1]")
-  local name = ffi.new("char[128]")
-  for i = 1, #devices do
-    local fd = devices[i].fd
-    ffi.C.ioctl(fd, JSIOCGVERSION, version)
-    ffi.C.ioctl(fd, JSIOCGAXES, axes)
-    ffi.C.ioctl(fd, JSIOCGBUTTONS, buttons)
-    ffi.C.ioctl(fd, JSIOCGNAME(128), name)
-    devices[i].version = version[0]
-    devices[i].num_axes = axes[0]
-    devices[i].num_buttons = buttons[0]
-    devices[i].name = ffi.string(name)
-    devices[i].event_buf = ffi.new("struct js_event[1]")
-    devices[i].buf_size = ffi.sizeof(devices[i].event_buf)
-    devices[i].axes = {}
-    devices[i].buttons = {}
-    for j = 1, axes[0] do
-      table.insert(devices[i].axes, { type = 0, number = 0, value = 0, time = 0 })
-    end
-    for j = 1, buttons[0] do
-      table.insert(devices[i].buttons, { type = 0, number = 0, value = 0, time = 0 })
-    end
-  end
-end
-
 function js.devinfo(devno)
   if (devno < 0) or (devno >= #devices) then
     return nil

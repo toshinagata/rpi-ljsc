@@ -163,11 +163,12 @@ function screen.create_offscreen_image(width, height)
     egl.SURFACE_TYPE, egl.WINDOW_BIT,
     egl.RENDERABLE_TYPE, egl.OPENVG_BIT,
     egl.NONE})
-  local colors = ffi.new('VGfloat[4]', {0.0, 0.0, 0.0, 0.0})
-  vg.setfv(vg.CLEAR_COLOR, 4, colors)
   
   --  The offscreen image is bound to the physical screen
   local result = egl.makeCurrent(_Screen.display, _Screen.surface, _Screen.surface, _Screen.context)
+
+  local colors = ffi.new('VGfloat[4]', {0.0, 0.0, 0.0, 0.0})
+  vg.setfv(vg.CLEAR_COLOR, 4, colors)
   
   if (_Screen.off_image ~= nil) then
     egl.destroySurface(_Screen.display, _Screen.off_surface)
@@ -200,6 +201,7 @@ function screen.create_offscreen_image(width, height)
   end
 
   result = egl.makeCurrent(_Screen.display, _Screen.off_surface, _Screen.off_surface, _Screen.off_context)
+  vg.setfv(vg.CLEAR_COLOR, 4, colors)
   return result
 end
 
@@ -327,12 +329,6 @@ function screen.init(devno, width, height)
   vg.setParameteri(_Screen.stroke_color, vg.PAINT_TYPE, vg.PAINT_TYPE_COLOR)
   vg.setParameterfv(_Screen.stroke_color, vg.PAINT_COLOR, 4, cols)
   _Screen.draw_flag = vg.STROKE_PATH
-  cols[0] = 0
-  cols[1] = 0
-  cols[2] = 0
-  cols[3] = 0
-  vg.setfv(vg.CLEAR_COLOR, 4, cols)
-  _Screen.tempcols = cols
   
   -- Load the ASCII font data
   _Screen.fontdata = ffi.new("uint8_t[2048]")
@@ -350,6 +346,14 @@ function screen.init(devno, width, height)
   _Screen.fonttemp = ffi.new("uint32_t[128]")
   _Screen.text_color = _Screen.rgb(1, 1, 1)
   _Screen.text_bgcolor = _Screen.rgb(0, 0, 0)
+  _Screen.clear_color = _Screen.rgb(0, 0, 0)
+  cols[0] = 0
+  cols[1] = 0
+  cols[2] = 0
+  cols[3] = 1
+  vg.setfv(vg.CLEAR_COLOR, 4, cols)
+  vg.clear(0, 0, width, height)
+  _Screen.tempcols = cols
   return true
 end
 
@@ -403,10 +407,10 @@ function screen.color(rgba)
   else
     _Screen.draw_flag = bit.bor(_Screen.draw_flag, vg.STROKE_PATH)
     local cols = ffi.new("VGfloat[4]")
-    cols[0] = bit.rshift(rgba, 24) / 255.0
-    cols[1] = (bit.rshift(rgba, 16) % 256) / 255.0
-    cols[2] = (bit.rshift(rgba, 8) % 256) / 255.0
-    cols[3] = (rgba % 256) / 255.0
+    cols[0] = bit.band(bit.rshift(rgba, 24), 255) / 255.0
+    cols[1] = bit.band(bit.rshift(rgba, 16), 255) / 255.0
+    cols[2] = bit.band(bit.rshift(rgba, 8), 255) / 255.0
+    cols[3] = bit.band(rgba, 255) / 255.0
     vg.setParameterfv(_Screen.stroke_color, vg.PAINT_COLOR, 4, cols)
     vg.setPaint(_Screen.stroke_color, vg.STROKE_PATH)
     pset_pattern[0] = rgba
@@ -424,10 +428,10 @@ function screen.fillcolor(rgba)
   else
     _Screen.draw_flag = bit.bor(_Screen.draw_flag, vg.FILL_PATH)
     local cols = ffi.new("VGfloat[4]")
-    cols[0] = bit.rshift(rgba, 24) / 255.0
-    cols[1] = (bit.rshift(rgba, 16) % 256) / 255.0
-    cols[2] = (bit.rshift(rgba, 8) % 256) / 255.0
-    cols[3] = (rgba % 256) / 255.0
+    cols[0] = bit.band(bit.rshift(rgba, 24), 255) / 255.0
+    cols[1] = bit.band(bit.rshift(rgba, 16), 255) / 255.0
+    cols[2] = bit.band(bit.rshift(rgba, 8), 255) / 255.0
+    cols[3] = bit.band(rgba, 255) / 255.0
     vg.setParameterfv(_Screen.fill_color, vg.PAINT_COLOR, 4, cols)
     vg.setPaint(_Screen.fill_color, vg.FILL_PATH)
   end
@@ -760,10 +764,10 @@ function screen.patwrite(image, x1, y1, mask)
       _Screen.mask_color = vg.createPaint()
       vg.setParameteri(_Screen.mask_color, vg.PAINT_TYPE, vg.PAINT_TYPE_COLOR)
     end
-    _Screen.tempcols[0] = bit.rshift(mask, 24) / 255.0
-    _Screen.tempcols[1] = (bit.rshift(mask, 16) % 256) / 255.0
-    _Screen.tempcols[2] = (bit.rshift(mask, 8) % 256) / 255.0
-    _Screen.tempcols[3] = (mask % 256) / 255.0
+    _Screen.tempcols[0] = bit.band(bit.rshift(mask, 24), 255) / 255.0
+    _Screen.tempcols[1] = bit.band(bit.rshift(mask, 16), 255) / 255.0
+    _Screen.tempcols[2] = bit.band(bit.rshift(mask, 8), 255) / 255.0
+    _Screen.tempcols[3] = bit.band(mask, 255) / 255.0
     vg.setParameterfv(_Screen.mask_color, vg.PAINT_COLOR, 4, _Screen.tempcols)
     vg.setPaint(_Screen.mask_color, vg.FILL_PATH)
     vg.seti(vg.IMAGE_MODE, vg.DRAW_IMAGE_MULTIPLY)
@@ -805,16 +809,16 @@ function screen.patdraw(n, x, y, mask)
       local image = vg.createImage(vg.sRGBA_8888, w, h, vg.IMAGE_QUALITY_FASTER)
       local mr, mg, mb, ma
       mask = math.floor(mask)
-      ma = (mask % 256) / 255.0
-      mr = bit.rshift(mask, 24) / 255.0 * ma
-      mg = (bit.rshift(mask, 16) % 256) / 255.0 * ma
-      mb = (bit.rshift(mask, 8) % 256) / 255.0 * ma
+      ma = bit.band(mask, 255) / 255.0
+      mr = bit.band(bit.rshift(mask, 24), 255) / 255.0 * ma
+      mg = bit.band(bit.rshift(mask, 16), 255) / 255.0 * ma
+      mb = bit.band(bit.rshift(mask, 8), 255) / 255.0 * ma
       for i = 0, w * h - 1 do
         local r, g, b, a, c
         c = _Screen.patbuffer[ofs + i]
-        r = math.floor(bit.rshift(c, 24) * mr)
-        g = math.floor((bit.rshift(c, 16) % 256) * mg)
-        b = math.floor((bit.rshift(c, 8) % 256) * mb)
+        r = math.floor(bit.band(bit.rshift(c, 24), 255) * mr)
+        g = math.floor(bit.band(bit.rshift(c, 16), 255) * mg)
+        b = math.floor(bit.band(bit.rshift(c, 8), 255) * mb)
         a = c % 256
         c = bit.lshift(r, 24) + bit.lshift(g, 16) + bit.lshift(b, 8) + a
         _Screen.patbuffer[pos + i] = c
@@ -862,14 +866,12 @@ function screen.gputs(x, y, s)
 end
 
 function screen.clearbox(x, y, width, height, rgba)
-  if rgba ~= nil then
-    local cols = ffi.new("VGfloat[4]")
-    cols[0] = bit.rshift(rgba, 24) / 255.0
-    cols[1] = (bit.rshift(rgba, 16) % 256) / 255.0
-    cols[2] = (bit.rshift(rgba, 8) % 256) / 255.0
-    cols[3] = (rgba % 256) / 255.0
-    vg.setfv(vg.CLEAR_COLOR, 4, cols)
-  end
+  rgba = rgba or _Screen.clear_color
+  _Screen.tempcols[0] = bit.band(bit.rshift(rgba, 24), 255) / 255.0
+  _Screen.tempcols[1] = bit.band(bit.rshift(rgba, 16), 255) / 255.0
+  _Screen.tempcols[2] = bit.band(bit.rshift(rgba, 8), 255) / 255.0
+  _Screen.tempcols[3] = bit.band(rgba, 255) / 255.0
+  vg.setfv(vg.CLEAR_COLOR, 4, _Screen.tempcols)
   vg.clear(x, y, width, height)
 end
 
